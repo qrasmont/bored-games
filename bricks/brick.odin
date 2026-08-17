@@ -9,22 +9,11 @@ SCREEN_SIZE :: 320
 TARGET_FPS :: 200
 WINDOW_NAME :: "bricks"
 
-score: int
-
-State :: enum {
-    Started,
-    Running,
-}
-state: State
-
-paddle_x: f32
 PADDLE__Y :: 260
 PADDLE_WIDTH :: 40
 PADDLE_HEIGHT :: 8
 PADDLE_SPEED :: 300
 
-ball_pos: rl.Vector2
-ball_dir: rl.Vector2
 BALL_SPEED :: 300
 BALL_RADIUS :: 5
 BALL_START_Y :: 160
@@ -33,7 +22,6 @@ BRICK_WIDTH :: 28
 BRICK_HEIGHT :: 10
 NUM_BRICKS_X :: 10
 NUM_BRICKS_Y :: 8
-bricks: [NUM_BRICKS_X][NUM_BRICKS_Y]bool
 
 BG_COLOR :: rl.Color{255, 248, 222, 255}
 PADDLE_COLOR :: rl.Color{50, 89, 158, 255}
@@ -72,6 +60,24 @@ brick_color_score := [BrickColor]int {
     .Red = 20,
 }
 
+Status :: enum {
+    Started,
+    Running,
+}
+
+State :: struct {
+    score: int,
+    status: Status,
+    paddle_x: f32,
+    paddle: rl.Rectangle,
+    ball_pos: rl.Vector2,
+    ball_dir: rl.Vector2,
+    bricks: [NUM_BRICKS_X][NUM_BRICKS_Y]bool
+}
+
+state: State
+
+
 reflect :: proc (dir, normal: rl.Vector2) -> rl.Vector2{
     return la.normalize(la.reflect(dir, la.normalize(normal)))
 }
@@ -91,7 +97,7 @@ brick_exist :: proc(x, y: int) -> bool {
         return false
     }
 
-    return bricks[x][y]
+    return state.bricks[x][y]
 }
 
 update_paddle :: proc(dt: f32) {
@@ -105,94 +111,92 @@ update_paddle :: proc(dt: f32) {
         paddle_velocity += PADDLE_SPEED
     }
 
-    paddle_x += paddle_velocity * dt
-    paddle_x = clamp(paddle_x, 0, SCREEN_SIZE - PADDLE_WIDTH)
+    state.paddle_x += paddle_velocity * dt
+    state.paddle_x = clamp(state.paddle_x, 0, SCREEN_SIZE - PADDLE_WIDTH)
 }
 
 update_ball :: proc(dt: f32) {
-    ball_velocity := BALL_SPEED * ball_dir
-    ball_pos += ball_velocity * dt
+    ball_velocity := BALL_SPEED * state.ball_dir
+    state.ball_pos += ball_velocity * dt
 
-    if ball_pos.x + BALL_RADIUS > SCREEN_SIZE {
-        ball_pos.x = SCREEN_SIZE - BALL_RADIUS
-        ball_dir = reflect(ball_dir, {-1, 0})
+    if state.ball_pos.x + BALL_RADIUS > SCREEN_SIZE {
+        state.ball_pos.x = SCREEN_SIZE - BALL_RADIUS
+        state.ball_dir = reflect(state.ball_dir, {-1, 0})
     }
 
-    if ball_pos.x - BALL_RADIUS < 0 {
-        ball_pos.x = BALL_RADIUS
-        ball_dir = reflect(ball_dir, {1, 0})
+    if state.ball_pos.x - BALL_RADIUS < 0 {
+        state.ball_pos.x = BALL_RADIUS
+        state.ball_dir = reflect(state.ball_dir, {1, 0})
     }
 
-    if ball_pos.y - BALL_RADIUS < 0 {
-        ball_pos.y = BALL_RADIUS
-        ball_dir = reflect(ball_dir, {0, 1})
+    if state.ball_pos.y - BALL_RADIUS < 0 {
+        state.ball_pos.y = BALL_RADIUS
+        state.ball_dir = reflect(state.ball_dir, {0, 1})
     }
 
-    if ball_pos.y > SCREEN_SIZE + BALL_RADIUS * 10 {
+    if state.ball_pos.y > SCREEN_SIZE + BALL_RADIUS * 10 {
         restart()
     }
 }
 
-paddle: rl.Rectangle
-
 update :: proc() {
     dt: f32
 
-    switch state {
+    switch state.status {
     case .Started:
         if (rl.IsKeyPressed(.SPACE)) {
-            paddle_middle := rl.Vector2 {paddle_x + PADDLE_WIDTH/2, PADDLE__Y}
-            ball_2_paddle := paddle_middle - ball_pos
-            ball_dir = la.normalize0(ball_2_paddle)
+            paddle_middle := rl.Vector2 {state.paddle_x + PADDLE_WIDTH/2, PADDLE__Y}
+            ball_2_paddle := paddle_middle - state.ball_pos
+            state.ball_dir = la.normalize0(ball_2_paddle)
 
-            state = .Running
+            state.status = .Running
         }
     case .Running:
         dt = rl.GetFrameTime()
     }
 
-    prev_ball_pos := ball_pos
+    prev_ball_pos := state.ball_pos
 
     update_paddle(dt)
     update_ball(dt)
 
-    paddle = rl.Rectangle { paddle_x, PADDLE__Y, PADDLE_WIDTH, PADDLE_HEIGHT }
+    state.paddle = rl.Rectangle { state.paddle_x, PADDLE__Y, PADDLE_WIDTH, PADDLE_HEIGHT }
 
-    if rl.CheckCollisionCircleRec(ball_pos, BALL_RADIUS, paddle) {
+    if rl.CheckCollisionCircleRec(state.ball_pos, BALL_RADIUS, state.paddle) {
         collision_norm: rl.Vector2
 
-        if prev_ball_pos.y < paddle.y + paddle.height {
+        if prev_ball_pos.y < state.paddle.y + state.paddle.height {
             collision_norm += {0, -1}
-            ball_pos.y = paddle.y - BALL_RADIUS
+            state.ball_pos.y = state.paddle.y - BALL_RADIUS
         }
 
-        if prev_ball_pos.y > paddle.y + paddle.height {
+        if prev_ball_pos.y > state.paddle.y + state.paddle.height {
             collision_norm += {0, 1}
-            ball_pos.y = paddle.y + paddle.height + BALL_RADIUS
+            state.ball_pos.y = state.paddle.y + state.paddle.height + BALL_RADIUS
         }
 
-        if prev_ball_pos.x < paddle.x {
+        if prev_ball_pos.x < state.paddle.x {
             collision_norm += {-1, 0}
         }
 
-        if prev_ball_pos.x > paddle.x + paddle.width {
+        if prev_ball_pos.x > state.paddle.x + state.paddle.width {
             collision_norm += {1, 0}
         }
 
         if collision_norm != 0 {
-            ball_dir = reflect(ball_dir, collision_norm)
+            state.ball_dir = reflect(state.ball_dir, collision_norm)
         }
     }
 
     brick_x_loop: for x in 0..<NUM_BRICKS_X {
         for y in 0..<NUM_BRICKS_Y {
-            if !bricks[x][y] {
+            if !state.bricks[x][y] {
                 continue
             }
 
             brick := calc_brick(x,y)
 
-            if rl.CheckCollisionCircleRec(ball_pos, BALL_RADIUS, brick) {
+            if rl.CheckCollisionCircleRec(state.ball_pos, BALL_RADIUS, brick) {
                 collision_norm: rl.Vector2
 
                 if prev_ball_pos.y < brick.y {
@@ -220,11 +224,11 @@ update :: proc() {
                 }
 
                 if collision_norm != 0 {
-                    ball_dir = reflect(ball_dir, collision_norm)
+                    state.ball_dir = reflect(state.ball_dir, collision_norm)
                 }
 
-                bricks[x][y] = false
-                score += brick_color_score[row_colors[y]]
+                state.bricks[x][y] = false
+                state.score += brick_color_score[row_colors[y]]
                 break brick_x_loop
             }
         }
@@ -232,12 +236,12 @@ update :: proc() {
 }
 
 draw :: proc() {
-    rl.DrawRectangleRec(paddle, PADDLE_COLOR)
-    rl.DrawCircleV(ball_pos, BALL_RADIUS, BALL_COLOR)
+    rl.DrawRectangleRec(state.paddle, PADDLE_COLOR)
+    rl.DrawCircleV(state.ball_pos, BALL_RADIUS, BALL_COLOR)
 
     for x in 0..<NUM_BRICKS_X {
         for y in 0..<NUM_BRICKS_Y {
-            if !bricks[x][y] {
+            if !state.bricks[x][y] {
                 continue
             }
 
@@ -268,20 +272,20 @@ draw :: proc() {
         }
     }
 
-    score_str := fmt.ctprint(score)
+    score_str := fmt.ctprint(state.score)
     score_str_width := rl.MeasureText(score_str, 20)
     rl.DrawText(score_str, i32(SCREEN_SIZE/2 - score_str_width/2), 5, 20, TEXT_COLOR)
 }
 
 restart :: proc() {
-    paddle_x = SCREEN_SIZE/2 - PADDLE_WIDTH/2
-    ball_pos = { SCREEN_SIZE/3, BALL_START_Y }
-    state = .Started
-    score = 0
+    state.paddle_x = SCREEN_SIZE/2 - PADDLE_WIDTH/2
+    state.ball_pos = { SCREEN_SIZE/3, BALL_START_Y }
+    state.status = .Started
+    state.score = 0
 
     for x in 0..<NUM_BRICKS_X {
         for y in 0..<NUM_BRICKS_Y {
-            bricks[x][y] = true
+            state.bricks[x][y] = true
         }
     }
 }
