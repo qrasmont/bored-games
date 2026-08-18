@@ -64,6 +64,7 @@ brick_color_score := [BrickColor]int {
 Status :: enum {
     Started,
     Running,
+    Over,
 }
 
 State :: struct {
@@ -140,7 +141,7 @@ update_ball :: proc(dt: f32) {
     }
 
     if state.ball_pos.y > SCREEN_SIZE + BALL_RADIUS * 10 {
-        restart()
+        state.status = .Over
     }
 }
 
@@ -156,6 +157,10 @@ update :: proc() {
             prev_ball_pos = state.ball_pos
 
             state.status = .Running
+        }
+    case .Over:
+        if (rl.IsKeyPressed(.SPACE)) {
+            restart();
         }
     case .Running:
         state.accumulated_time += rl.GetFrameTime()
