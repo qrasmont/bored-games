@@ -82,6 +82,8 @@ State :: struct {
 state: State
 prev_ball_pos: rl.Vector2
 prev_paddle_x: f32
+over_sound: rl.Sound
+start_sound: rl.Sound
 
 
 reflect :: proc (dir, normal: rl.Vector2) -> rl.Vector2{
@@ -141,6 +143,7 @@ update_ball :: proc(dt: f32) {
     }
 
     if state.ball_pos.y > SCREEN_SIZE + BALL_RADIUS * 10 {
+        rl.PlaySound(over_sound)
         state.status = .Over
     }
 }
@@ -156,6 +159,7 @@ update :: proc() {
             state.ball_dir = la.normalize0(ball_2_paddle)
             prev_ball_pos = state.ball_pos
 
+            rl.PlaySound(start_sound)
             state.status = .Running
         }
     case .Over:
@@ -292,9 +296,33 @@ draw :: proc() {
         }
     }
 
-    score_str := fmt.ctprint(state.score)
-    score_str_width := rl.MeasureText(score_str, 20)
-    rl.DrawText(score_str, i32(SCREEN_SIZE/2 - score_str_width/2), 5, 20, TEXT_COLOR)
+    switch state.status {
+    case .Started:
+        title_str := fmt.ctprint("BRICKS")
+        title_str_width := rl.MeasureText(title_str, 50)
+        press_str := fmt.ctprint("Press [space]")
+        press_str_width := rl.MeasureText(fmt.ctprint(press_str), 20)
+        rl.DrawText(title_str, i32(SCREEN_SIZE/2 - title_str_width/2), SCREEN_SIZE/2 - 50, 50, TEXT_COLOR)
+        rl.DrawText(press_str, i32(SCREEN_SIZE/2 - press_str_width/2), SCREEN_SIZE/2, 20, TEXT_COLOR)
+
+    case .Over:
+        rl.DrawRectangle(0, 0, SCREEN_SIZE, SCREEN_SIZE, {255, 0, 0, 100})
+
+        over_str := fmt.ctprint("Game Over")
+        over_str_width := rl.MeasureText(over_str, 50)
+        score_str := fmt.ctprint("Score ", state.score)
+        score_str_width := rl.MeasureText(score_str, 20)
+        press_str := fmt.ctprint("Press [space]")
+        press_str_width := rl.MeasureText(fmt.ctprint(press_str), 10)
+        rl.DrawText(over_str, i32(SCREEN_SIZE/2 - over_str_width/2), SCREEN_SIZE/2 - 50, 50, TEXT_COLOR)
+        rl.DrawText(score_str, i32(SCREEN_SIZE/2 - score_str_width/2), SCREEN_SIZE/2, 20, TEXT_COLOR)
+        rl.DrawText(press_str, i32(SCREEN_SIZE/2 - press_str_width/2), SCREEN_SIZE/2 + 20, 10, TEXT_COLOR)
+
+    case .Running:
+        score_str := fmt.ctprint(state.score)
+        score_str_width := rl.MeasureText(score_str, 20)
+        rl.DrawText(score_str, i32(SCREEN_SIZE/2 - score_str_width/2), 5, 20, TEXT_COLOR)
+    }
 }
 
 restart :: proc() {
@@ -318,8 +346,11 @@ restart :: proc() {
 main :: proc() {
     rl.SetConfigFlags({.VSYNC_HINT})
     rl.InitWindow(WINDOW_SIZE, WINDOW_SIZE, WINDOW_NAME)
+    rl.InitAudioDevice()
     rl.SetTargetFPS(TARGET_FPS)
 
+    start_sound = rl.LoadSound("start.wav")
+    over_sound = rl.LoadSound("over.wav")
     restart()
 
     for !rl.WindowShouldClose() {
@@ -342,5 +373,6 @@ main :: proc() {
         free_all(context.temp_allocator)
     }
 
+    rl.CloseAudioDevice()
     rl.CloseWindow()
 }
