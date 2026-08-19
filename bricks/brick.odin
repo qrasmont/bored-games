@@ -87,6 +87,7 @@ over_sound: rl.Sound
 start_sound: rl.Sound
 mute: bool = true
 
+bg_texture: rl.Texture
 
 reflect :: proc (dir, normal: rl.Vector2) -> rl.Vector2 {
     return la.normalize(la.reflect(dir, la.normalize(normal)))
@@ -270,6 +271,8 @@ update :: proc() {
 }
 
 draw :: proc() {
+    rl.DrawTexture(bg_texture, 0, 0, rl.WHITE)
+
     paddle_rec := rl.Rectangle { state.paddle_render_x, PADDLE__Y, PADDLE_WIDTH, PADDLE_HEIGHT }
     rl.DrawRectangleRec(paddle_rec, PADDLE_COLOR)
     rl.DrawCircleV(state.ball_render_pos, BALL_RADIUS, BALL_COLOR)
@@ -365,15 +368,17 @@ main :: proc() {
     rl.InitAudioDevice()
     rl.SetTargetFPS(TARGET_FPS)
 
+    bg_texture = rl.LoadTexture("bg.png")
+
     start_sound = rl.LoadSound("start.wav")
     over_sound = rl.LoadSound("over.wav")
+
     restart()
 
     for !rl.WindowShouldClose() {
         update()
 
         rl.BeginDrawing()
-        rl.ClearBackground(BG_COLOR)
 
         camera := rl.Camera2D {
             zoom = f32(rl.GetScreenHeight() / SCREEN_SIZE)
