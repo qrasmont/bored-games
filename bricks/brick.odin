@@ -88,6 +88,7 @@ start_sound: rl.Sound
 mute: bool = true
 
 bg_texture: rl.Texture
+paddle_texture: rl.Texture
 
 reflect :: proc (dir, normal: rl.Vector2) -> rl.Vector2 {
     return la.normalize(la.reflect(dir, la.normalize(normal)))
@@ -274,7 +275,7 @@ draw :: proc() {
     rl.DrawTexture(bg_texture, 0, 0, rl.WHITE)
 
     paddle_rec := rl.Rectangle { state.paddle_render_x, PADDLE__Y, PADDLE_WIDTH, PADDLE_HEIGHT }
-    rl.DrawRectangleRec(paddle_rec, PADDLE_COLOR)
+    rl.DrawTextureRec(paddle_texture, paddle_rec, {state.paddle_render_x, PADDLE__Y}, rl.WHITE)
     rl.DrawCircleV(state.ball_render_pos, BALL_RADIUS, BALL_COLOR)
 
     for x in 0..<NUM_BRICKS_X {
@@ -369,6 +370,7 @@ main :: proc() {
     rl.SetTargetFPS(TARGET_FPS)
 
     bg_texture = rl.LoadTexture("bg.png")
+    paddle_texture = rl.LoadTexture("paddle.png")
 
     start_sound = rl.LoadSound("start.wav")
     over_sound = rl.LoadSound("over.wav")
