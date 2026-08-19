@@ -82,11 +82,13 @@ State :: struct {
 state: State
 prev_ball_pos: rl.Vector2
 prev_paddle_x: f32
+
 over_sound: rl.Sound
 start_sound: rl.Sound
+mute: bool = true
 
 
-reflect :: proc (dir, normal: rl.Vector2) -> rl.Vector2{
+reflect :: proc (dir, normal: rl.Vector2) -> rl.Vector2 {
     return la.normalize(la.reflect(dir, la.normalize(normal)))
 }
 
@@ -143,7 +145,9 @@ update_ball :: proc(dt: f32) {
     }
 
     if state.ball_pos.y > SCREEN_SIZE + BALL_RADIUS * 10 {
-        rl.PlaySound(over_sound)
+        if !mute {
+            rl.PlaySound(over_sound)
+        }
         state.status = .Over
     }
 }
@@ -159,7 +163,9 @@ update :: proc() {
             state.ball_dir = la.normalize0(ball_2_paddle)
             prev_ball_pos = state.ball_pos
 
-            rl.PlaySound(start_sound)
+            if !mute {
+                rl.PlaySound(start_sound)
+            }
             state.status = .Running
         }
     case .Over:
@@ -256,6 +262,11 @@ update :: proc() {
         state.ball_render_pos = math.lerp(prev_ball_pos, state.ball_pos, blend)
         state.paddle_render_x = math.lerp(prev_paddle_x, state.paddle_x, blend)
     }
+
+    if (rl.IsKeyPressed(.M)) {
+        mute = !mute
+    }
+
 }
 
 draw :: proc() {
@@ -294,6 +305,11 @@ draw :: proc() {
             rl.DrawLineEx(top_right, bottom_right, 1, {74, 74, 74, 100})
             rl.DrawLineEx(bottom_left, bottom_right, 1, {74, 74, 74, 100})
         }
+    }
+
+    if mute {
+        mute_str := fmt.ctprint("muted")
+        rl.DrawText(mute_str, 5, 5, 10, TEXT_COLOR)
     }
 
     switch state.status {
