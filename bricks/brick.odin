@@ -26,7 +26,7 @@ NUM_BRICKS_Y :: 8
 
 BG_COLOR :: rl.Color{255, 248, 222, 255}
 PADDLE_COLOR :: rl.Color{50, 89, 158, 255}
-BALL_COLOR :: rl.Color{227, 86, 86, 255}
+BALL_COLOR :: rl.Color{194, 84, 82, 255}
 TEXT_COLOR :: rl.Color{0, 0, 0, 255}
 
 BrickColor :: enum {
@@ -48,10 +48,10 @@ row_colors := [NUM_BRICKS_Y]BrickColor {
 }
 
 brick_color_values := [BrickColor]rl.Color {
-    .Yellow = {255, 228, 24, 255},
-    .Orange = {255, 149, 25, 255},
-    .Purple = {232, 21, 119, 255},
-    .Red = {255, 77, 41, 255},
+    .Yellow = {244, 196, 123, 255},
+    .Orange = {234, 154, 39, 255},
+    .Purple = {128, 62, 97, 255},
+    .Red = {242, 120, 85, 255},
 }
 
 brick_color_score := [BrickColor]int {
