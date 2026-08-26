@@ -71,6 +71,7 @@ Modifier :: enum {
 Status :: enum {
     Started,
     Running,
+    Won,
     Over,
 }
 
@@ -180,6 +181,8 @@ update :: proc() {
             }
             state.status = .Running
         }
+    case .Won:
+        fallthrough
     case .Over:
         if (rl.IsKeyPressed(.SPACE)) {
             restart();
@@ -221,9 +224,11 @@ update :: proc() {
                 }
             }
 
+            broken_bricks := 0
             brick_x_loop: for x in 0..<NUM_BRICKS_X {
                 for y in 0..<NUM_BRICKS_Y {
                     if state.bricks[x][y] == 0 {
+                        broken_bricks += 1
                         continue
                     }
 
@@ -265,6 +270,10 @@ update :: proc() {
                         break brick_x_loop
                     }
                 }
+            }
+
+            if broken_bricks >= NUM_BRICKS_X * NUM_BRICKS_Y {
+                state.status = .Won
             }
 
             state.accumulated_time -= DT
@@ -335,10 +344,13 @@ draw :: proc() {
         rl.DrawText(title_str, i32(SCREEN_SIZE/2 - title_str_width/2), SCREEN_SIZE/2 - 50, 50, TEXT_COLOR)
         rl.DrawText(press_str, i32(SCREEN_SIZE/2 - press_str_width/2), SCREEN_SIZE/2, 20, TEXT_COLOR)
 
+    case .Won:
+        fallthrough
     case .Over:
-        rl.DrawRectangle(0, 0, SCREEN_SIZE, SCREEN_SIZE, {255, 0, 0, 100})
+        rec_color: rl.Color = state.status == .Won ? {0, 255, 0, 100} : {255, 0, 0, 100}
+        rl.DrawRectangle(0, 0, SCREEN_SIZE, SCREEN_SIZE, rec_color)
 
-        over_str := fmt.ctprint("Game Over")
+        over_str := state.status == .Won ? fmt.ctprint("You win!") : fmt.ctprint("Game Over")
         over_str_width := rl.MeasureText(over_str, 50)
         score_str := fmt.ctprint("Score ", state.score)
         score_str_width := rl.MeasureText(score_str, 20)
