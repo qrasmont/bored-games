@@ -74,7 +74,7 @@ State :: struct {
     paddle_x: f32,
     ball_pos: rl.Vector2,
     ball_dir: rl.Vector2,
-    bricks: [NUM_BRICKS_X][NUM_BRICKS_Y]bool,
+    bricks: [NUM_BRICKS_X][NUM_BRICKS_Y]int,
     ball_render_pos: rl.Vector2,
     paddle_render_x: f32
 }
@@ -109,7 +109,7 @@ brick_exist :: proc(x, y: int) -> bool {
         return false
     }
 
-    return state.bricks[x][y]
+    return state.bricks[x][y] > 0
 }
 
 update_paddle :: proc(dt: f32) {
@@ -213,7 +213,7 @@ update :: proc() {
 
             brick_x_loop: for x in 0..<NUM_BRICKS_X {
                 for y in 0..<NUM_BRICKS_Y {
-                    if !state.bricks[x][y] {
+                    if state.bricks[x][y] == 0 {
                         continue
                     }
 
@@ -250,7 +250,7 @@ update :: proc() {
                             state.ball_dir = reflect(state.ball_dir, collision_norm)
                         }
 
-                        state.bricks[x][y] = false
+                        state.bricks[x][y] -= 1
                         state.score += brick_color_score[row_colors[y]]
                         break brick_x_loop
                     }
@@ -280,7 +280,7 @@ draw :: proc() {
 
     for x in 0..<NUM_BRICKS_X {
         for y in 0..<NUM_BRICKS_Y {
-            if !state.bricks[x][y] {
+            if state.bricks[x][y] == 0 {
                 continue
             }
 
@@ -358,7 +358,7 @@ restart :: proc() {
 
     for x in 0..<NUM_BRICKS_X {
         for y in 0..<NUM_BRICKS_Y {
-            state.bricks[x][y] = true
+            state.bricks[x][y] = 1
         }
     }
 }
