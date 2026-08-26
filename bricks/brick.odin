@@ -61,6 +61,13 @@ brick_color_score := [BrickColor]int {
     .Red = 20,
 }
 
+Modifier :: enum {
+    BigBar,
+    TinyBar,
+    SpeedyBall,
+    None,
+}
+
 Status :: enum {
     Started,
     Running,
@@ -76,7 +83,10 @@ State :: struct {
     ball_dir: rl.Vector2,
     bricks: [NUM_BRICKS_X][NUM_BRICKS_Y]int,
     ball_render_pos: rl.Vector2,
-    paddle_render_x: f32
+    paddle_render_x: f32,
+    modifier: Modifier,
+    paddle_width: f32,
+    ball_speed: f32,
 }
 
 state: State
@@ -124,11 +134,11 @@ update_paddle :: proc(dt: f32) {
     }
 
     state.paddle_x += paddle_velocity * dt
-    state.paddle_x = clamp(state.paddle_x, 0, SCREEN_SIZE - PADDLE_WIDTH)
+    state.paddle_x = clamp(state.paddle_x, 0, SCREEN_SIZE - state.paddle_width)
 }
 
 update_ball :: proc(dt: f32) {
-    ball_velocity := BALL_SPEED * state.ball_dir
+    ball_velocity := state.ball_speed * state.ball_dir
     state.ball_pos += ball_velocity * dt
 
     if state.ball_pos.x + BALL_RADIUS > SCREEN_SIZE {
@@ -160,7 +170,7 @@ update :: proc() {
     switch state.status {
     case .Started:
         if (rl.IsKeyPressed(.SPACE)) {
-            paddle_middle := rl.Vector2 {state.paddle_x + PADDLE_WIDTH/2, PADDLE__Y}
+            paddle_middle := rl.Vector2 {state.paddle_x + state.paddle_width/2, PADDLE__Y}
             ball_2_paddle := paddle_middle - state.ball_pos
             state.ball_dir = la.normalize0(ball_2_paddle)
             prev_ball_pos = state.ball_pos
@@ -183,7 +193,7 @@ update :: proc() {
             update_paddle(DT)
             update_ball(DT)
 
-            paddle := rl.Rectangle { state.paddle_x, PADDLE__Y, PADDLE_WIDTH, PADDLE_HEIGHT }
+            paddle := rl.Rectangle { state.paddle_x, PADDLE__Y, state.paddle_width, PADDLE_HEIGHT }
 
             if rl.CheckCollisionCircleRec(state.ball_pos, BALL_RADIUS, paddle) {
                 collision_norm: rl.Vector2
@@ -274,7 +284,7 @@ update :: proc() {
 draw :: proc() {
     rl.DrawTexture(bg_texture, 0, 0, rl.WHITE)
 
-    paddle_rec := rl.Rectangle { state.paddle_render_x, PADDLE__Y, PADDLE_WIDTH, PADDLE_HEIGHT }
+    paddle_rec := rl.Rectangle { state.paddle_render_x, PADDLE__Y, state.paddle_width, PADDLE_HEIGHT }
     rl.DrawTextureRec(paddle_texture, paddle_rec, {state.paddle_render_x, PADDLE__Y}, rl.WHITE)
     rl.DrawCircleV(state.ball_render_pos, BALL_RADIUS, BALL_COLOR)
 
@@ -347,7 +357,9 @@ draw :: proc() {
 
 restart :: proc() {
     state.accumulated_time = 0
-    state.paddle_x = SCREEN_SIZE/2 - PADDLE_WIDTH/2
+    state.ball_speed = BALL_SPEED
+    state.paddle_width = PADDLE_WIDTH
+    state.paddle_x = SCREEN_SIZE/2 - state.paddle_width/2
     prev_paddle_x = state.paddle_x
     state.ball_pos = { SCREEN_SIZE/3, BALL_START_Y }
     prev_ball_pos = state.ball_pos
@@ -355,6 +367,7 @@ restart :: proc() {
     state.score = 0
     state.ball_render_pos = prev_ball_pos
     state.paddle_render_x = prev_paddle_x
+    state.modifier = .None
 
     for x in 0..<NUM_BRICKS_X {
         for y in 0..<NUM_BRICKS_Y {
